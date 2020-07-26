@@ -1,60 +1,93 @@
 <?php
+session_start();
+if(isset($_SESSION['user'])){
+    header('Location: profile.php');
+}
+include "db.php";
 
-/**
- * Laravel - A PHP Framework For Web Artisans
- *
- * @package  Laravel
- * @author   Taylor Otwell <taylor@laravel.com>
- */
+function fill_group($dsn)
+{
+    $output = '';
+    $sql = "SELECT * FROM groups";
+    $sql = $dsn->query($sql);
+    while ($row = mysqli_fetch_array($sql)) {
+        $output .= '<option value="' . $row["grp_id"] . '">' . $row["group_name"] . '</option>';
+    }
+    return $output;
+}
+function fill_info($dsn){
+    $output = '';
+    $sql_join = "SELECT * FROM groups JOIN students ON groups.grp_id = students.group_id JOIN grade ON students.std_id = grade.student_id JOIN subjects ON subjects.sub_id = grade.subject_id";
+    $sql_join = $dsn->query($sql_join);
 
-define('LARAVEL_START', microtime(true));
+    while($row = mysqli_fetch_array($sql_join)) {
+//
+        $output .= '<tr><td>'.$row["group_name"].'</td><td>'.$row["student_name"].'</td><td>'.$row["grade_name"].'</td><td>'.$row["subject_name"].'</td>';
+//
 
-/*
-|--------------------------------------------------------------------------
-| Register The Auto Loader
-|--------------------------------------------------------------------------
-|
-| Composer provides a convenient, automatically generated class loader for
-| our application. We just need to utilize it! We'll simply require it
-| into the script here so that we don't have to worry about manual
-| loading any of our classes later on. It feels great to relax.
-|
-*/
+    }
+    return $output;
 
-require __DIR__.'/../vendor/autoload.php';
 
-/*
-|--------------------------------------------------------------------------
-| Turn On The Lights
-|--------------------------------------------------------------------------
-|
-| We need to illuminate PHP development, so let us turn on the lights.
-| This bootstraps the framework and gets it ready for use, then it
-| will load up this application so that we can run it and send
-| the responses back to the browser and delight our users.
-|
-*/
 
-$app = require_once __DIR__.'/../bootstrap/app.php';
+}
+?>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
 
-/*
-|--------------------------------------------------------------------------
-| Run The Application
-|--------------------------------------------------------------------------
-|
-| Once we have the application, we can handle the incoming request
-| through the kernel, and send the associated response back to
-| the client's browser allowing them to enjoy the creative
-| and wonderful application we have prepared for them.
-|
-*/
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+<!--Форма авторизации-->
+<form action="signin.php" method="post">
+    <label>Логин</label>
+    <input type="text" name="login" placeholder="Введите свой логин">
+    <label>Пароль</label>
+    <input type="password" name="password" placeholder="Введите свой пароль">
+    <button type="submit">Войти</button>
+    <p>
+        Нет аккаунта? - <a href="register.php">Зарегистрируйтесь</a>
+    </p>
+    <?php
 
-$kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
+    if(isset($_SESSION['message'])){
+        echo '<p class="msg">'. $_SESSION['message'] .'</p>';
+    }
+    unset($_SESSION['message']);
+    ?>
+</form>
 
-$response = $kernel->handle(
-    $request = Illuminate\Http\Request::capture()
-);
+<h3>
+    <select name="group" id="group">
+        <option value="">Показать все группы</option>
+        <?php echo fill_group($dsn); ?>
+    </select>
+    <br /><br />
 
-$response->send();
+</h3>
+<div class="row" id="show_info">
 
-$kernel->terminate($request, $response);
+</div>
+</body>
+</html>
+
+<script>
+    $(document).ready(function () {
+        $('#group').change(function () {
+            var grp_id = $(this).val();
+            //console.log(grp_id);
+            $.ajax({
+               url: 'select.php',
+               method: 'POST',
+                data:{grp_id:grp_id},
+                success: function(data){
+                   $('#show_info').html(data);
+                }
+            });
+        });
+
+    });
+</script>
